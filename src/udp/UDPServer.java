@@ -11,6 +11,10 @@ import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+
+/**
+ * A UDP server that handles client requests to interact with a key-value store.
+ */
 public class UDPServer {
     private static final KeyValueStore store = new KeyValueStore();
     private static final int BUFFER_SIZE = 1024;
@@ -28,7 +32,9 @@ public class UDPServer {
 
             byte[] buffer = new byte[BUFFER_SIZE];
 
-            while (true) {  // ✅ 服务器持续运行
+            // Loop to handle incoming requests
+            while (true) {
+                // Receive a request packet from a client
                 DatagramPacket requestPacket = new DatagramPacket(buffer, buffer.length);
                 socket.receive(requestPacket);
 
@@ -41,9 +47,11 @@ public class UDPServer {
                     Request request = (Request) in.readObject();
                     log("Received request from " + clientAddress + ":" + clientPort + " - Type: " + request.getType() + " - Key: " + request.getKey());
 
+                    // Process the request and generate a response
                     Response response = handleRequest(request);
                     byte[] responseData = serializeResponse(response);
 
+                    // Send the response back to the client
                     DatagramPacket responsePacket = new DatagramPacket(responseData, responseData.length, clientAddress, clientPort);
                     socket.send(responsePacket);
                     log("Sent response to " + clientAddress + ":" + clientPort + " - " + response.getMessage());
@@ -57,16 +65,23 @@ public class UDPServer {
         }
     }
 
+
+    /**
+     * Processes a client request and generates a response.
+     */
     private static Response handleRequest(Request request) {
         switch (request.getType()) {
             case PUT:
+                // Store key-value pair
                 store.put(request.getKey(), request.getValue());
                 return new Response(true, "PUT successful for key: " + request.getKey());
             case GET:
+                // Get value for the key
                 String value = store.get(request.getKey());
                 return value != null ? new Response(true, "Value: " + value)
                         : new Response(false, "Key not found: " + request.getKey());
             case DELETE:
+                // Delete key-value pair
                 String deletedValue = store.delete(request.getKey());
                 return deletedValue != null ? new Response(true, "DELETE successful for key: " + request.getKey())
                         : new Response(false, "Key not found: " + request.getKey());
@@ -75,6 +90,10 @@ public class UDPServer {
         }
     }
 
+
+    /**
+     * Serializes a response object into a byte array.
+     */
     private static byte[] serializeResponse(Response response) throws IOException {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              ObjectOutputStream out = new ObjectOutputStream(baos)) {

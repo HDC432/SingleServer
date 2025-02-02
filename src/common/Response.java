@@ -2,6 +2,10 @@ package common;
 
 import java.io.Serializable;
 
+
+/**
+ * This class is serializable, allowing it to be sent over a network or saved to a file.
+ */
 public class Response implements Serializable {
     private boolean success;
     private String message;

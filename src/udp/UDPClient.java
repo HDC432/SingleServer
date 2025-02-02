@@ -11,6 +11,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Scanner;
 
+
+/**
+ * A UDP client that interacts with a key-value store server.
+ */
 public class UDPClient {
     private static final int BUFFER_SIZE = 1024;
 
@@ -23,37 +27,43 @@ public class UDPClient {
         String serverIp = args[0];
         int port = Integer.parseInt(args[1]);
 
+        // Create a UDP socket
         try (DatagramSocket socket = new DatagramSocket();
              Scanner scanner = new Scanner(System.in)) {
 
             InetAddress serverAddress = InetAddress.getByName(serverIp);
 
+            // Loop to interact with the user
             while (true) {
                 System.out.print("Enter command (PUT/GET/DELETE) or 'exit' to quit: ");
                 String command = scanner.nextLine().trim().toUpperCase();
-
+                // Exit the client if the user types 'exit'
                 if (command.equals("EXIT")) {
                     System.out.println("Disconnecting from server...");
                     break;
                 }
-
+                // Validate the command
                 if (!(command.equals("PUT") || command.equals("GET") || command.equals("DELETE"))) {
                     System.out.println("Invalid command. Please enter PUT, GET, DELETE, or 'exit'.");
                     continue;
                 }
 
+                // Get the key from the user
                 System.out.print("Enter key: ");
                 String key = scanner.nextLine().trim();
 
+                // Get the value from the user
                 String value = null;
                 if (command.equals("PUT")) {
                     System.out.print("Enter value: ");
                     value = scanner.nextLine().trim();
                 }
 
+                // Create a request object
                 Request.Type type = Request.Type.valueOf(command);
                 Request request = new Request(type, key, value);
 
+                // Send the request to the server and receive the response
                 sendRequest(socket, serverAddress, port, request);
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -61,14 +71,20 @@ public class UDPClient {
         }
     }
 
+
+    /**
+     * Sends a request to the server and waits for a response.
+     */
     private static void sendRequest(DatagramSocket socket, InetAddress serverAddress, int port, Request request)
             throws IOException, ClassNotFoundException {
 
+        // Serialize the request into a byte array
         byte[] requestData = serializeRequest(request);
         DatagramPacket requestPacket = new DatagramPacket(requestData, requestData.length, serverAddress, port);
         socket.send(requestPacket);
         log("Sent " + request.getType() + " request for key: " + request.getKey());
 
+        // Receive the response from the server
         byte[] buffer = new byte[BUFFER_SIZE];
         DatagramPacket responsePacket = new DatagramPacket(buffer, buffer.length);
         socket.receive(responsePacket);
@@ -81,6 +97,10 @@ public class UDPClient {
         }
     }
 
+
+    /**
+     * Serializes a request object into a byte array.
+     */
     private static byte[] serializeRequest(Request request) throws IOException {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              ObjectOutputStream out = new ObjectOutputStream(baos)) {
