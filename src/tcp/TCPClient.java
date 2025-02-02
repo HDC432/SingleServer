@@ -5,8 +5,7 @@ import common.Response;
 
 import java.io.*;
 import java.net.Socket;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.Scanner;
 
 public class TCPClient {
     public static void main(String[] args) {
@@ -20,40 +19,43 @@ public class TCPClient {
 
         try (Socket socket = new Socket(serverIp, port);
              ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-             ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
+             ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+             Scanner scanner = new Scanner(System.in)) {
 
-            Request putRequest = new Request(Request.Type.PUT, "key1", "value1");
-            log("Sending PUT request for key: " + putRequest.getKey());
-            out.writeObject(putRequest);
-            out.flush();
+            while (true) {
+                System.out.print("Enter command (PUT/GET/DELETE) or 'exit' to quit: ");
+                String command = scanner.nextLine().trim().toUpperCase();
 
-            Response putResponse = (Response) in.readObject();
-            log("Received response: " + putResponse.getMessage());
+                if (command.equals("EXIT")) {
+                    System.out.println("Disconnecting from server...");
+                    break;
+                }
 
-            Request getRequest = new Request(Request.Type.GET, "key1", null);
-            log("Sending GET request for key: " + getRequest.getKey());
-            out.writeObject(getRequest);
-            out.flush();
+                if (!(command.equals("PUT") || command.equals("GET") || command.equals("DELETE"))) {
+                    System.out.println("Invalid command. Please enter PUT, GET, DELETE, or 'exit'.");
+                    continue;
+                }
 
-            Object responseObj = in.readObject();
-            if (responseObj instanceof Response) {
-                Response getResponse = (Response) responseObj;
-                log("Received response: " + getResponse.getMessage());
-            } else {
-                log("Unexpected response type: " + responseObj.getClass().getName());
+                System.out.print("Enter key: ");
+                String key = scanner.nextLine().trim();
+
+                String value = null;
+                if (command.equals("PUT")) {
+                    System.out.print("Enter value: ");
+                    value = scanner.nextLine().trim();
+                }
+
+                Request.Type type = Request.Type.valueOf(command);
+                Request request = new Request(type, key, value);
+
+                out.writeObject(request);
+                out.flush();
+
+                Response response = (Response) in.readObject();
+                System.out.println("Received response: " + response.getMessage());
             }
-
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
-            log("Client error: " + e.getMessage());
         }
-    }
-
-    private static void log(String message) {
-        System.out.println(timestamp() + " " + message);
-    }
-
-    private static String timestamp() {
-        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
     }
 }

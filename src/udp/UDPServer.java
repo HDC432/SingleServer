@@ -1,66 +1,59 @@
-package tcp;
+package udp;
 
 import common.KeyValueStore;
 import common.Request;
 import common.Response;
 
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class TCPServer {
+public class UDPServer {
     private static final KeyValueStore store = new KeyValueStore();
+    private static final int BUFFER_SIZE = 1024;
 
     public static void main(String[] args) {
         if (args.length != 1) {
-            log("Usage: java TCPServer <port>");
+            log("Usage: java UDPServer <port>");
             return;
         }
 
         int port = Integer.parseInt(args[0]);
 
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            log("Server started on port " + port);
+        try (DatagramSocket socket = new DatagramSocket(port)) {
+            log("UDP Server started on port " + port);
 
-            while (true) { 
-                Socket clientSocket = serverSocket.accept();
-                log("New client connected from " + clientSocket.getInetAddress() + ":" + clientSocket.getPort());
+            byte[] buffer = new byte[BUFFER_SIZE];
 
-                new Thread(() -> handleClient(clientSocket)).start();
-            }
-        } catch (IOException e) {
-            logError("Server error: " + e.getMessage());
-        }
-    }
+            while (true) {  // ✅ 服务器持续运行
+                DatagramPacket requestPacket = new DatagramPacket(buffer, buffer.length);
+                socket.receive(requestPacket);
 
-    private static void handleClient(Socket clientSocket) {
-        try (ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
-             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream())) {
+                InetAddress clientAddress = requestPacket.getAddress();
+                int clientPort = requestPacket.getPort();
 
-            while (true) { 
-                try {
+                try (ByteArrayInputStream bais = new ByteArrayInputStream(requestPacket.getData(), 0, requestPacket.getLength());
+                     ObjectInputStream in = new ObjectInputStream(bais)) {
+
                     Request request = (Request) in.readObject();
-                    log("Received request from " + clientSocket.getInetAddress() + ":" + clientSocket.getPort() +
-                            " - Type: " + request.getType() + " - Key: " + request.getKey());
+                    log("Received request from " + clientAddress + ":" + clientPort + " - Type: " + request.getType() + " - Key: " + request.getKey());
 
                     Response response = handleRequest(request);
-                    out.writeObject(response);
-                    out.flush();
-                    log("Sent response to " + clientSocket.getInetAddress() + ":" + clientSocket.getPort() +
-                            " - " + response.getMessage());
+                    byte[] responseData = serializeResponse(response);
 
-                } catch (EOFException e) {
-                    log("Client disconnected: " + clientSocket.getInetAddress() + ":" + clientSocket.getPort());
-                    break;
+                    DatagramPacket responsePacket = new DatagramPacket(responseData, responseData.length, clientAddress, clientPort);
+                    socket.send(responsePacket);
+                    log("Sent response to " + clientAddress + ":" + clientPort + " - " + response.getMessage());
+
                 } catch (IOException | ClassNotFoundException e) {
-                    logError("Error while handling client: " + e.getMessage());
-                    break;
+                    logError("Received malformed request from " + clientAddress + ":" + clientPort);
                 }
             }
         } catch (IOException e) {
-            logError("Error with client connection: " + e.getMessage());
+            logError("Server error: " + e.getMessage());
         }
     }
 
@@ -79,6 +72,14 @@ public class TCPServer {
                         : new Response(false, "Key not found: " + request.getKey());
             default:
                 return new Response(false, "Invalid request type");
+        }
+    }
+
+    private static byte[] serializeResponse(Response response) throws IOException {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ObjectOutputStream out = new ObjectOutputStream(baos)) {
+            out.writeObject(response);
+            return baos.toByteArray();
         }
     }
 
