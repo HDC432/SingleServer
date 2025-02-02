@@ -7,6 +7,7 @@ import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketTimeoutException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Scanner;
@@ -17,6 +18,7 @@ import java.util.Scanner;
  */
 public class UDPClient {
     private static final int BUFFER_SIZE = 1024;
+    private static final int TIMEOUT = 5000;
 
     public static void main(String[] args) {
         if (args.length != 2) {
@@ -32,6 +34,7 @@ public class UDPClient {
              Scanner scanner = new Scanner(System.in)) {
 
             InetAddress serverAddress = InetAddress.getByName(serverIp);
+            socket.setSoTimeout(TIMEOUT);
 
             // Loop to interact with the user
             while (true) {
@@ -87,13 +90,16 @@ public class UDPClient {
         // Receive the response from the server
         byte[] buffer = new byte[BUFFER_SIZE];
         DatagramPacket responsePacket = new DatagramPacket(buffer, buffer.length);
-        socket.receive(responsePacket);
 
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(responsePacket.getData(), 0, responsePacket.getLength());
-             ObjectInputStream in = new ObjectInputStream(bais)) {
-
-            Response response = (Response) in.readObject();
-            log("Received response: " + response.getMessage());
+        try {
+            socket.receive(responsePacket);
+            try (ByteArrayInputStream bais = new ByteArrayInputStream(responsePacket.getData(), 0, responsePacket.getLength());
+                ObjectInputStream in = new ObjectInputStream(bais)) {
+                Response response = (Response) in.readObject();
+                log("Received response: " + response.getMessage());
+            }
+        }catch (SocketTimeoutException e) {
+            logError("Timeout waiting for response to " + request.getType() + " request for key: " + request.getKey());
         }
     }
 

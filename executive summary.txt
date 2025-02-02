@@ -1,0 +1,22 @@
+Assignment Overview:
+
+This assignment involved developing a client-server application that supports both TCP and UDP communication protocols. The primary goal was to deepen my understanding of socket programming in Java, focusing on how clients and servers exchange data over a network. The server is designed to manage key-value storage operations, handling commands such as PUT, GET, and DELETE, while the client is responsible for sending these requests and processing the server’s responses. Beyond basic functionality, the assignment emphasized the importance of robust error handling, implementing timeout mechanisms to manage unresponsive servers, and ensuring reliable communication under different network conditions. Through this project, I gained practical experience with key concepts related to network protocols, data serialization, and concurrent client management in a multi-threaded environment.
+
+
+Technical Impression
+
+Implementing the TCP server was relatively straightforward because of the reliable, connection-oriented nature of TCP. However, working with UDP presented some challenges, especially in handling packet loss and ensuring data integrity since UDP is connectionless and does not guarantee delivery.
+
+Implementing the TCP server with multithreading was particularly interesting, as it required careful handling of concurrent client connections and synchronization to ensure thread safety.
+
+One of the biggest challenges was implementing the timeout mechanism for UDP. I had to learn how to configure socket timeouts to ensure the client could handle unresponsive servers without freezing. 
+
+Serialization of objects using ObjectOutputStream and ObjectInputStream was a key part of the implementation, enabling the transmission of complex data structures like Request and Response objects over the network. Debugging and testing the system highlighted the importance of robust error handling and logging, especially when dealing with network-related issues such as timeouts or malformed data.
+
+
+Use Case
+
+A practical use case for this key-value store system is in online multiplayer game chat rooms, where real-time communication is essential. In this context, the TCP implementation can be used to manage reliable text-based messaging, ensuring that chat messages are delivered in order and without loss—critical for team coordination or game lobbies. Meanwhile, the UDP implementation is ideal for real-time voice communication, where low latency is more important than perfect reliability. Voice chat systems prioritize speed, and occasional packet loss is acceptable to avoid delays. By leveraging both TCP and UDP, the key-value store can support fast, scalable, and reliable communication, enhancing the gaming experience for players worldwide.
+
+
+
